@@ -108,7 +108,7 @@ std::string udp_server::get_name_client(sockaddr *client_address, socklen_t clie
     const socklen_t client_name_len = NI_MAXHOST;
     char client_name_buf[client_name_len];
 
-    if(getnameinfo(client_address, client_address_len, client_name_buf, client_name_len, NULL, 0, NI_NAMEREQD))
+    if(!getnameinfo(client_address, client_address_len, client_name_buf, client_name_len, NULL, 0, NI_NAMEREQD))
         return client_name_buf;
 
     return "*****";
