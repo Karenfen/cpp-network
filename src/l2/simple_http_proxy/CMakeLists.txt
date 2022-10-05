@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(simple-http-proxy C CXX)
 
-set(${PROJECT_NAME}_SRC main.cpp proxy_server.cpp)
+set(${PROJECT_NAME}_SRC main.cpp proxy_server.cpp logger.cpp logger.h)
 
 source_group(source FILES ${${PROJECT_NAME}_SRC}})
 

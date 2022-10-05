@@ -83,6 +83,37 @@ std::string ProxyServer::read_line(socket_wrapper::Socket &s) const
 }
 
 
+std::string ProxyServer::read_all(socket_wrapper::Socket &sock) const
+{
+    const ssize_t buf_len = 1024;
+    char buffer[buf_len];
+    std::string result{};
+    ssize_t res_len{};
+
+    do{
+        res_len = recv(sock, buffer, buf_len, 0);
+
+        if (-1 == res_len)
+        {
+#if !defined(_WIN32)
+            // Interrupted (by signal, for example), restart read().
+            if (EINTR == errno);
+            else
+#endif
+                throw std::logic_error(sock_wrap_.get_last_error_string());
+
+        }
+
+        if(res_len > 0)
+            result.append(buffer, res_len);
+
+    }while(res_len > 0);
+
+
+    return result;
+}
+
+
 void ProxyServer::client_error(socket_wrapper::Socket &sock, const std::string &cause, int err_num, const std::string &short_message,
                                const std::string &long_message) const
 {
@@ -266,14 +297,17 @@ void ProxyServer::proxify(socket_wrapper::Socket client_socket)
 
     try
     {
-        auto line = read_line(client_socket);
-        rtrim(line);
+        auto in_data = read_all(client_socket);
+        auto out_data = in_data;
+        rtrim(in_data);
 
-        std::stringstream ss(line);
+        logger_.write(out_data);
+
+        std::stringstream ss(in_data);
         ss >> method >> uri >> version;
 
         std::cout
-            << "Client request: \"" << line << "\" parsed.\n"
+            << "Client request: \"" << in_data << "\" parsed.\n"
             << "Method = " << method << "\n"
             << "URI = " << uri << "\n"
             << "Version = " << version
@@ -296,51 +330,7 @@ void ProxyServer::proxify(socket_wrapper::Socket client_socket)
             << "Port from the request = " << port
             << std::endl;
 
-        auto [new_headers, host_name_from_header] = parse_request_headers(client_socket);
-
-        if (host_name_from_header.size())
-        {
-            std::tie(host_name, std::ignore, port) = parse_uri(host_name_from_header);
-            std::cout
-                << "Host from the header = " << host_name << "\n"
-                << "Port from the header = " << port
-                << std::endl;
-        }
-
-        // Generate a new modified HTTP request to forward to the server
-        std::stringstream new_request_s;
-
-        new_request_s
-            << "GET "
-            << path
-            << " HTTP/1.1\r\n";
-
-        new_request_s
-            << "Host: " << host_name << "\r\n"
-            << user_agent_hdr
-            << accept_hdr
-            << accept_encoding_hdr
-            << connection_hdr
-            << proxy_conn_hdr
-            << new_headers
-            << "\r\n";
-
-        const std::string& new_request = new_request_s.str();
-
-        std::cout
-            << "\n"
-            << "============\n"
-            << "New request:\n"
-            << "------------\n"
-            << new_request
-            << "============\n"
-            << std::endl;
-
-        std::cout
-            << "Connecting to host: \"" << host_name
-            << ":" << port
-            << "\"..."
-            << std::endl;
+\
 
         // Create new connection with server.
         auto&& proxy_to_server_socket = connect_to_target_server(host_name, port);
@@ -350,7 +340,7 @@ void ProxyServer::proxify(socket_wrapper::Socket client_socket)
             << "Writing HTTP request to the target server..."
             << std::endl;
 
-        if (send(proxy_to_server_socket, &new_request.at(0), new_request.size(), 0) < 0)
+        if (send(proxy_to_server_socket, &out_data.at(0), out_data.size(), 0) < 0)
         {
             auto s = sock_wrap_.get_last_error_string();
             std::cerr << s << std::endl;
@@ -365,12 +355,9 @@ void ProxyServer::proxify(socket_wrapper::Socket client_socket)
 
         std::string response;
 
-        do
-        {
-            // HTTP 1.x is a text protocol.
-            line = read_line(proxy_to_server_socket);
-            response += line;
-        } while (line.size());
+
+        // HTTP 1.x is a text protocol.
+        response = read_all(proxy_to_server_socket);
 
         std::cout
             << "Response was read.\n"
