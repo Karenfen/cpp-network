@@ -7,6 +7,7 @@
 
 #include <socket_wrapper/socket_headers.h>
 #include <socket_wrapper/socket_class.h>
+#include "logger.h"
 
 
 class ProxyServer final
@@ -29,6 +30,7 @@ public:
 
 public:
     std::string read_line(socket_wrapper::Socket &sock) const;
+    std::string read_all(socket_wrapper::Socket &sock) const;
 
     // Send HTML error message to the client.
     void client_error(socket_wrapper::Socket &sock, const std::string &cause, int err_num, const std::string &short_message,
@@ -63,5 +65,6 @@ private:
     bool started_ = false;
     socket_wrapper::SocketWrapper sock_wrap_;
     socket_wrapper::Socket sock_;
+    logger logger_;
 };
 
