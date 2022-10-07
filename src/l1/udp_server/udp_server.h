@@ -31,12 +31,12 @@ public:
 
 private:
     std::string get_name_client(sockaddr *client_address, socklen_t client_address_len);
+    void connection_handling(socket_wrapper::Socket client_socket, sockaddr client_address_);
 
     socket_wrapper::SocketWrapper m_sock_wrap;
-    socket_wrapper::Socket m_sock{AF_INET, SOCK_DGRAM, IPPROTO_UDP};
+    socket_wrapper::Socket m_sock{AF_INET, SOCK_STREAM, IPPROTO_TCP};
     const int m_port;
     sockaddr_in m_addr;
-    char m_buffer[256];
     bool m_is_run;
     std::map<std::string, std::function<void()>> m_commands;
 

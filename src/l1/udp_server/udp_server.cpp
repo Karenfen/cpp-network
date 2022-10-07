@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <string>
 #include <stdexcept>
+#include <thread>
 
 
 
@@ -45,55 +46,34 @@ bool udp_server::start()
 
 void udp_server::run()
 {
-    // socket address used to store client address
-    struct sockaddr_in client_address = {0};
-    socklen_t client_address_len = sizeof(sockaddr_in);
-    ssize_t recv_len = 0;
+    listen(m_sock, 0);
 
     std::cout << "Running echo server...\n" << std::endl;
     char client_address_buf[INET_ADDRSTRLEN];
     m_is_run = true;
 
-    while (m_is_run)
+    while(m_is_run)
     {
-        // Read content into buffer from an incoming client.
-        recv_len = recvfrom(m_sock, m_buffer, sizeof(m_buffer) - 1, 0,
-                            reinterpret_cast<sockaddr *>(&client_address),
-                            &client_address_len);
+        struct sockaddr client_addr = {0};
 
-        if (recv_len > 0)
+        socklen_t client_len = sizeof(client_addr);
+
+        socket_wrapper::Socket client_sock(accept(m_sock, &client_addr, &client_len));
+
+        std::cout << "Accepted connection" << std::endl;
+
+        if (!client_sock)
         {
-            m_buffer[recv_len] = '\0';
-            std::cout
-                << "Client: "
-                << get_name_client(reinterpret_cast<sockaddr *>(&client_address), client_address_len)
-                << " with address "
-                << inet_ntop(AF_INET, &client_address.sin_addr, client_address_buf, sizeof(client_address_buf) / sizeof(client_address_buf[0]))
-                << ":" << ntohs(client_address.sin_port)
-                << " sent datagram "
-                << "[length = "
-                << recv_len
-                << "]:\n'''\n"
-                << m_buffer
-                << "\n'''"
-                << std::endl;
-
-            std::string command_string = {m_buffer, 0, (size_t)recv_len - 1};
-            rtrim(command_string);
-
-            if(m_commands.contains(command_string))
-            {
-                auto command = m_commands.at(command_string);
-                command();
-            }
-
-            // Send same content back to the client ("echo").
-            sendto(m_sock, m_buffer, recv_len, 0, reinterpret_cast<const sockaddr *>(&client_address),
-                   client_address_len);
+            throw std::logic_error(m_sock_wrap.get_last_error_string());
         }
 
-        std::cout << std::endl;
+        //Start a new thread for every new connection.
+        std::thread client_thread(&udp_server::connection_handling, this, std::move(client_sock), std::move(client_addr));
+        std::cout << "Creating client thread..." << std::endl;
+        client_thread.join();
     }
+
+    m_sock.close();
 }
 
 
@@ -112,6 +92,64 @@ std::string udp_server::get_name_client(sockaddr *client_address, socklen_t clie
         return client_name_buf;
 
     return "*****";
+}
+
+void udp_server::connection_handling(socket_wrapper::Socket client_socket, sockaddr client_address)
+{
+    sockaddr_in* client_address_in = reinterpret_cast<sockaddr_in*>(&client_address);
+    socklen_t client_address_len = sizeof(sockaddr);
+    ssize_t recv_len = 0;
+
+    char recv_data_buf[1024];
+    char client_address_buf[INET_ADDRSTRLEN] {"***************"};
+    std::string name_client = get_name_client(&client_address, client_address_len);
+    uint16_t client_port = ntohs(client_address_in->sin_port);
+    inet_ntop(AF_INET, &client_address_in->sin_addr, client_address_buf, INET_ADDRSTRLEN);
+
+
+
+    while (m_is_run)
+        {
+            // Read content into buffer from client.
+            recv_len = recv(client_socket, recv_data_buf, sizeof(recv_data_buf), 0);
+
+            if (recv_len > 0)
+            {
+                recv_data_buf[recv_len] = '\0';
+                std::cout
+                    << "Client: "
+                    << name_client
+                    << " with address "
+                    << client_address_buf
+                    << ":" << client_port
+                    << " sent datagram "
+                    << "[length = "
+                    << recv_len
+                    << "]:\n'''\n"
+                    << recv_data_buf
+                    << "\n'''"
+                    << std::endl;
+
+                std::string command_string = {recv_data_buf, 0, (size_t)recv_len - 1};
+                rtrim(command_string);
+
+                if(m_commands.contains(command_string))
+                {
+                    auto command = m_commands.at(command_string);
+                    command();
+                }
+
+                // Send same content back to the client ("echo").
+                send(client_socket, recv_data_buf, recv_len, 0);
+            }
+            else
+            {
+                client_socket.close();
+                break;
+            }
+
+            std::cout << std::endl;
+        }
 }
 
 
