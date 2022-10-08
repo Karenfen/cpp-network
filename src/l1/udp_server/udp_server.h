@@ -38,10 +38,11 @@ private:
     const int m_port;
     sockaddr_in m_addr;
     bool m_is_run;
-    std::map<std::string, std::function<void()>> m_commands;
+    std::map<std::string, std::function<void(const socket_wrapper::Socket& sender)>> m_commands;
 
     // commands
-    void m_exit();
+    void m_exit(const socket_wrapper::Socket& sender);
+    void m_shootdown(const socket_wrapper::Socket& sender);
 };
 
 #endif // UDP_SERVER_H

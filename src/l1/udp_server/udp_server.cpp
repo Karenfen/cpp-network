@@ -25,7 +25,8 @@ udp_server::udp_server(const int& port):
 
     m_addr.sin_addr.s_addr = INADDR_ANY;
 
-    m_commands["exit"] = [this](){this->m_exit();};
+    m_commands["exit"] = [this](const socket_wrapper::Socket& sender){this->m_exit(sender);};
+    m_commands["shootdown"] = [this](const socket_wrapper::Socket& sender){this->m_shootdown(sender);};
 }
 
 
@@ -130,13 +131,13 @@ void udp_server::connection_handling(socket_wrapper::Socket client_socket, socka
                     << "\n'''"
                     << std::endl;
 
-                std::string command_string = {recv_data_buf, 0, (size_t)recv_len - 1};
+                std::string command_string = {recv_data_buf, (size_t)recv_len};
                 rtrim(command_string);
 
                 if(m_commands.contains(command_string))
                 {
                     auto command = m_commands.at(command_string);
-                    command();
+                    command(client_socket);
                 }
 
                 // Send same content back to the client ("echo").
@@ -153,11 +154,17 @@ void udp_server::connection_handling(socket_wrapper::Socket client_socket, socka
 }
 
 
-void udp_server::m_exit()
+void udp_server::m_exit(const socket_wrapper::Socket& sender)
+{
+    close(sender);
+}
+
+void udp_server::m_shootdown(const socket_wrapper::Socket &sender)
 {
     m_is_run = false;
     std::cout << "Clothing server..." << std::endl;
     m_sock.close();
+    close(sender);
 }
 
 
