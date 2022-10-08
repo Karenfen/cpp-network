@@ -7,8 +7,13 @@
 
 
 
-udp_client::udp_client(const char* server_address, int port):
+udp_client::udp_client(int port):
     m_port_server(port)
+{
+
+}
+
+bool udp_client::init(const char *server_address)
 {
     if (!m_sock)
     {
@@ -30,10 +35,12 @@ udp_client::udp_client(const char* server_address, int port):
 
     if(!m_addr_serv_ptr)
     {
-        throw std::runtime_error("Incorrect cast address!");
+        return false;
     }
 
-    m_addr_serv_len = sizeof(sockaddr_in);
+    m_addr_serv_len = sizeof(sockaddr);
+
+    return true;
 }
 
 
@@ -45,6 +52,12 @@ std::string udp_client::get_last_error()
 
 bool udp_client::run_session()
 {
+    if(connect(m_sock, m_addr_serv_ptr, sizeof(sockaddr)) != 0)
+    {
+        std::cerr << "Connecting error!" << std::endl;
+        return false;
+    }
+
     std::cout << "Session started..." << std::endl;
 
     while(true)
@@ -54,12 +67,19 @@ bool udp_client::run_session()
         std::cin >> massege;
 
         if(!m_send_message(massege))
-            return false;
+        {
+            std::cout << "Сonnection aborted!" << std::endl;
+            break;
+        }
 
-        if(massege == "exit")
+        auto resv_result = m_recv_data();
+
+        std::cout << resv_result.second << std::endl;
+
+        if(resv_result.first == false)
             break;
     }
-
+    m_sock.close();
     std::cout << "Session ended!" << std::endl;
 
     return true;
@@ -68,6 +88,37 @@ bool udp_client::run_session()
 
 bool udp_client::m_send_message(const std::string &text)
 {
-    return sendto(m_sock, (text + "\0").c_str(), (int)(text.length() + 2), 0,
-                  m_addr_serv_ptr, m_addr_serv_len);
+    ssize_t result = send(m_sock, (text + "\n").c_str(), (int)(text.length() + 1), 0);
+
+    if(result == -1)
+        throw std::logic_error(get_last_error());
+    else if(result == 0)
+        return false;
+    else
+        return true;
 }
+
+std::pair<bool, std::string>  udp_client::m_recv_data()
+{
+    char buffer[256]{};
+    std::string str_result{};
+    bool result{};
+
+    ssize_t recv_len = recv(m_sock, buffer, sizeof(buffer), 0);
+
+    if(recv_len == -1)
+        throw std::logic_error(get_last_error());
+    else if(recv_len == 0)
+    {
+        result = false;
+        str_result = "Сonnection aborted!";
+    }
+    else
+    {
+        str_result.append(buffer, recv_len);
+        result = true;
+    }
+
+    return std::make_pair(result, str_result);
+}
+

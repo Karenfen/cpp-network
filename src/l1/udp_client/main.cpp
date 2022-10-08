@@ -16,7 +16,13 @@ int main(int argc, char const *argv[])
         return EXIT_FAILURE;
     }
 
-    udp_client client(argv[1], std::stoi(argv[2]));
+    udp_client client(std::stoi(argv[2]));
+
+    if(!client.init(argv[1]))
+    {
+        std::cerr << "Initialization error!" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     if(!client.run_session())
     {
