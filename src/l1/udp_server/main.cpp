@@ -6,13 +6,14 @@
 int main(int argc, char const *argv[])
 {
 
-    if (argc != 2)
+    if (argc != 3)
     {
-        std::cout << "Usage: " << argv[0] << " <port>" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <port to ip4> " << " <port to ip6>" <<std::endl;
         return EXIT_FAILURE;
     }
 
-    udp_server server(std::stoi(argv[1]));
+    udp_server server(std::stoi(argv[1]), std::stoi(argv[2]));
+    server.init();
 
     if(!server.start())
     {
