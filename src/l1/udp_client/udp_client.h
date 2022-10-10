@@ -22,14 +22,19 @@ private:
     bool m_send_message(const std::string &text);
     std::pair<bool, std::string> m_recv_data();
     bool m_connected();
+    const socket_wrapper::Socket& m_socket();
+    bool m_server_name_is_resolved(const char *server_name);
 
     socket_wrapper::SocketWrapper m_sock_wrap;
     socket_wrapper::Socket m_sock{AF_INET, SOCK_STREAM, IPPROTO_TCP};
+    socket_wrapper::Socket m_sock6{AF_INET6, SOCK_STREAM, IPPROTO_TCP};
     const int m_port_server;
     sockaddr_in m_addr_serv;
+    sockaddr_in6 m_addr_serv6;
     sockaddr* m_addr_serv_ptr{nullptr};
-    socklen_t m_addr_serv_len;
-    //std::string m_buffer{};
+    bool is_ipv4;
+
+
 };
 
 #endif // UDP_CLIENT_H
