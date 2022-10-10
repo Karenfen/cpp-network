@@ -11,6 +11,8 @@
 #include <socket_wrapper/socket_wrapper.h>
 #include <socket_wrapper/socket_class.h>
 
+#define IS_COMMAND_SIZE(x) ((x) <= 10)
+#define SIZE_BUFFER 1024
 
 // Trim from end (in place).
 static inline std::string& rtrim(std::string& s)
@@ -42,7 +44,7 @@ private:
 
     // commands
     void m_exit(const socket_wrapper::Socket& sender);
-    void m_shootdown(const socket_wrapper::Socket& sender);
+    void m_shutdown(const socket_wrapper::Socket& sender);
 };
 
 #endif // UDP_SERVER_H

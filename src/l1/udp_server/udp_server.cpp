@@ -26,7 +26,7 @@ udp_server::udp_server(const int& port):
     m_addr.sin_addr.s_addr = INADDR_ANY;
 
     m_commands["exit"] = [this](const socket_wrapper::Socket& sender){this->m_exit(sender);};
-    m_commands["shootdown"] = [this](const socket_wrapper::Socket& sender){this->m_shootdown(sender);};
+    m_commands["shutdown"] = [this](const socket_wrapper::Socket& sender){this->m_shutdown(sender);};
 }
 
 
@@ -101,7 +101,7 @@ void udp_server::connection_handling(socket_wrapper::Socket client_socket, socka
     socklen_t client_address_len = sizeof(sockaddr);
     ssize_t recv_len = 0;
 
-    char recv_data_buf[1024];
+    char recv_data_buf[SIZE_BUFFER];
     char client_address_buf[INET_ADDRSTRLEN] {"***************"};
     std::string name_client = get_name_client(&client_address, client_address_len);
     uint16_t client_port = ntohs(client_address_in->sin_port);
@@ -112,7 +112,7 @@ void udp_server::connection_handling(socket_wrapper::Socket client_socket, socka
     while (m_is_run)
         {
             // Read content into buffer from client.
-            recv_len = recv(client_socket, recv_data_buf, sizeof(recv_data_buf), 0);
+            recv_len = recv(client_socket, recv_data_buf, SIZE_BUFFER, 0);
 
             if (recv_len > 0)
             {
@@ -134,10 +134,13 @@ void udp_server::connection_handling(socket_wrapper::Socket client_socket, socka
                 std::string command_string = {recv_data_buf, (size_t)recv_len};
                 rtrim(command_string);
 
-                if(m_commands.contains(command_string))
+                if(IS_COMMAND_SIZE(command_string.length()))
                 {
-                    auto command = m_commands.at(command_string);
-                    command(client_socket);
+                    if(m_commands.contains(command_string))
+                    {
+                        auto command = m_commands.at(command_string);
+                        command(client_socket);
+                    }
                 }
 
                 // Send same content back to the client ("echo").
@@ -159,7 +162,7 @@ void udp_server::m_exit(const socket_wrapper::Socket& sender)
     close(sender);
 }
 
-void udp_server::m_shootdown(const socket_wrapper::Socket &sender)
+void udp_server::m_shutdown(const socket_wrapper::Socket &sender)
 {
     m_is_run = false;
     std::cout << "Clothing server..." << std::endl;
