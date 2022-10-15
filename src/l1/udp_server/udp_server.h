@@ -26,7 +26,7 @@ static inline std::string& rtrim(std::string& s)
 class udp_server
 {
 public:
-    udp_server(const int& port, const int& port6);
+    udp_server(const int& port);
     bool init();
     bool start();
     void run();
@@ -41,7 +41,6 @@ private:
     socket_wrapper::Socket m_sock{AF_INET, SOCK_STREAM, IPPROTO_TCP};
     socket_wrapper::Socket m_sock6{AF_INET6, SOCK_STREAM, IPPROTO_TCP};
     const int m_port;
-    const int m_port6;
     sockaddr_in m_addr;
     sockaddr_in6 m_addr6;
     bool m_is_run;

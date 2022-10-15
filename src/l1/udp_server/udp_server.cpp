@@ -8,8 +8,8 @@
 
 
 
-udp_server::udp_server(const int& port, const int& port6):
-    m_port(port), m_port6(port6)
+udp_server::udp_server(const int& port):
+    m_port(port)
 {
 
 
@@ -28,14 +28,21 @@ bool udp_server::init()
         .sin_port = htons(m_port),
     };
 
+
     m_addr.sin_addr.s_addr = INADDR_ANY;
 
     m_addr6 =
     {
       .sin6_family = PF_INET6,
-      .sin6_port = htons(m_port6),
+      .sin6_port = htons(m_port),
       .sin6_addr = in6addr_any
     };
+
+    const int flag = 1;
+
+    setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&flag), sizeof(flag));
+    setsockopt(m_sock6, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&flag), sizeof(flag));
+
 
 
     m_commands["exit"] = [this](const socket_wrapper::Socket& sender){this->m_exit(sender);};
@@ -56,7 +63,7 @@ bool udp_server::start()
         return false;
     }
 
-    std::cout << "Starting echo server ip6 on the port " << m_port6 << "...\n";
+    std::cout << "Starting echo server ip6 on the port " << m_port << "...\n";
 
     if (bind(m_sock6, reinterpret_cast<const sockaddr*>(&m_addr6), sizeof(m_addr6)) != 0)
     {
