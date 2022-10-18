@@ -6,22 +6,32 @@
 int main(int argc, char const *argv[])
 {
 
-    if (argc != 3)
+    if (argc != 2)
     {
-        std::cout << "Usage: " << argv[0] << " <port to ip4> " << " <port to ip6>" <<std::endl;
+        std::cout << "Usage: " << argv[0] << " <port to ip4> " <<std::endl;
         return EXIT_FAILURE;
     }
 
-    udp_server server(std::stoi(argv[1]), std::stoi(argv[2]));
-    server.init();
-
-    if(!server.start())
+    try
     {
-        std::cerr << server.get_last_error() << std::endl;
-        return EXIT_FAILURE;
+        boost::asio::io_context context;
+
+        udp_server server(std::stoi(argv[1]), context);
+
+        server.init();
+
+//        if(!server.start())
+//        {
+//            throw std::logic_error(server.get_last_error());
+//        }
+
+        context.run();
+
+    }  catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
     }
 
-    server.run();
 
     return EXIT_SUCCESS;
 }

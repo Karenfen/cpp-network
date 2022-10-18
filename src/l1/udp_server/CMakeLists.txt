@@ -5,8 +5,11 @@ project(udp-server C CXX)
 set(${PROJECT_NAME}_SRC
     main.cpp
     udp_server.cpp
+    tcpconnection.cpp
     udp_server.h
+    tcpconnection.h
     )
+
 
 source_group(source FILES ${${PROJECT_NAME}_SRC}})
 

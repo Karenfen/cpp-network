@@ -5,51 +5,34 @@
 #include <algorithm>
 #include <iostream>
 #include <map>
-#include <functional>
 
 #include <socket_wrapper/socket_headers.h>
 #include <socket_wrapper/socket_wrapper.h>
 #include <socket_wrapper/socket_class.h>
+#include <boost/asio.hpp>
 
-#define IS_COMMAND_SIZE(x) ((x) <= 10)
-#define SIZE_BUFFER 1024
+#include "tcpconnection.h"
 
-// Trim from end (in place).
-static inline std::string& rtrim(std::string& s)
-{
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](int c) { return !std::isspace(c); }).base());
-    return s;
-}
 
 
 
 class udp_server
 {
 public:
-    udp_server(const int& port, const int& port6);
-    bool init();
-    bool start();
-    void run();
-    std::string get_last_error();
+    udp_server(const int& port, boost::asio::io_context& context);
+    void init();
 
 private:
-    std::string m_get_name_client(sockaddr *client_address, socklen_t client_address_len);
-    void m_connection_handling(socket_wrapper::Socket client_socket, sockaddr client_address);
-    void m_loop(socket_wrapper::Socket serv_sock);
+    void start_accept();
+    std::string m_get_name_client(const tcp::socket& klient_sock);
+    void handler(TCPconnection::smart_pointer klient, const boost::system::error_code& error);
 
-    socket_wrapper::SocketWrapper m_sock_wrap;
-    socket_wrapper::Socket m_sock{AF_INET, SOCK_STREAM, IPPROTO_TCP};
-    socket_wrapper::Socket m_sock6{AF_INET6, SOCK_STREAM, IPPROTO_TCP};
-    const int m_port;
-    const int m_port6;
-    sockaddr_in m_addr;
-    sockaddr_in6 m_addr6;
-    bool m_is_run;
-    std::map<std::string, std::function<void(const socket_wrapper::Socket& sender)>> m_commands;
+private:
 
-    // commands
-    void m_exit(const socket_wrapper::Socket& sender);
-    void m_shutdown(const socket_wrapper::Socket& sender);
+    boost::asio::io_context& m_context;
+    tcp::acceptor m_acceptor;
+    bool is_run;
+
 };
 
 #endif // UDP_SERVER_H
