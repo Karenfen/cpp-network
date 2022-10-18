@@ -77,7 +77,7 @@ bool udp_client::run_session()
     {
         std::string massege{};
 
-        std::cin >> massege;
+        getline(std::cin, massege);
 
         if(!m_send_message(massege))
         {
