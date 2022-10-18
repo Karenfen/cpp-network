@@ -6,6 +6,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <fstream>
 
 #ifdef _WIN32
 #   define ioctl ioctlsocket
@@ -26,6 +27,15 @@ extern "C"
 using namespace std::chrono_literals;
 
 const auto MAX_RECV_BUFFER_SIZE = 256;
+
+
+std::string get_file_path_from_request(const std::string& request)
+{
+    std::string path{"/home/karenfen/new_file.txt"};
+
+
+    return path;
+}
 
 
 bool send_request(socket_wrapper::Socket &sock, const std::string &request)
@@ -125,6 +135,7 @@ int main(int argc, const char * const argv[])
         std::cout << "> " << std::flush;
         if (!std::getline(std::cin, request)) break;
 
+        std::string path_to_downloaded_file {get_file_path_from_request(request)};
         std::cout
             << "Sending request: \"" << request << "\"..."
             << std::endl;
@@ -142,6 +153,10 @@ int main(int argc, const char * const argv[])
             << std::endl;
 
         std::this_thread::sleep_for(2ms);
+        std::ofstream file(path_to_downloaded_file, std::ios::binary);
+
+        if(!file)
+            throw std::logic_error("Opening file error!");
 
         while (true)
         {
@@ -156,6 +171,7 @@ int main(int argc, const char * const argv[])
             {
                 buffer[recv_bytes] = '\0';
                 std::cout << "------------\n" << std::string(buffer.begin(), std::next(buffer.begin(), recv_bytes)) << std::endl;
+                file.write(buffer.data(), recv_bytes);
                 continue;
             }
             else if (-1 == recv_bytes)
@@ -168,7 +184,11 @@ int main(int argc, const char * const argv[])
 
             break;
         }
+
+        file.close();
     }
+
+
 
     return EXIT_SUCCESS;
 }

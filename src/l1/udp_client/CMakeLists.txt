@@ -1,15 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(udp-server C CXX)
+project(udp-client C CXX)
 
 set(${PROJECT_NAME}_SRC
     main.cpp
-    udp_server.cpp
-    tcpconnection.cpp
-    udp_server.h
-    tcpconnection.h
+    udp_client.cpp
+    udp_client.h
     )
-
 
 source_group(source FILES ${${PROJECT_NAME}_SRC}})
 
